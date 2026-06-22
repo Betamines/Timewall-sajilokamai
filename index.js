@@ -3,27 +3,25 @@ const admin = require('firebase-admin');
 const crypto = require('crypto');
 const app = express();
 
-// 1. Firebase direct URL connect garne (Service Account Bina, Sandbox context anusaar)
-// Note: Render ma deploy garda secure connect garna Firebase Admin configurations automatic verify huncha
+// Firebase initialization
 admin.initializeApp({
   databaseURL: "https://sajilokamai-72496-default-rtdb.firebaseio.com/"
 });
 
 const db = admin.database();
-const SECRET_KEY = "1eb292ef5a5c266b2b3c59a6bc91774a"; // Timro TimeWall Secret Key
+const SECRET_KEY = "1eb292ef5a5c266b2b3c59a6bc91774a"; // Timro Secret Key
 
 app.use(express.json());
 
-// Root endpoint check garna ko lagi (Server chalya cha ki nai herna)
 app.get('/', (req, res) => {
-    res.send("Sajilo Kamai TimeWall Backend is Running!");
+    res.send("Sajilo Kamai TimeWall Backend with Coins Support is Running!");
 });
 
-// Main TimeWall Postback Integration URL
+// TimeWall Postback Integration URL
 app.get('/timewall-postback', async (req, res) => {
     const { userID, transactionID, revenue, currencyAmount, hash, type } = req.query;
 
-    // Security Verification: Hash verify gareko falsified request block garna
+    // Security check: Hash verify gareko falsified request block garna
     const expectedHash = crypto
         .createHash('sha256')
         .update(userID + revenue + SECRET_KEY)
@@ -34,7 +32,7 @@ app.get('/timewall-postback', async (req, res) => {
     }
 
     try {
-        // Timro Firebase ko 'users/userID' node tracking path
+        // Firebase database data modification rules
         const userRef = db.ref(`users/${userID}`);
         const snapshot = await userRef.once('value');
 
@@ -43,17 +41,19 @@ app.get('/timewall-postback', async (req, res) => {
         }
 
         const userData = snapshot.val();
+        
+        // Timro database key format 'balance' integer storage context check
         let currentBalance = parseInt(userData.balance || 0);
-        let points = parseInt(currencyAmount);
+        let coinsAmount = parseInt(currencyAmount);
 
-        // Lifecycle rules check: 'credit' bhaye point thapne, 'chargeback' bhaye ghataune
+        // Lifecycle stage automation: 'credit' bhaye coins thapne, 'chargeback' bhaye ghataune
         if (type === 'credit') {
-            currentBalance += points;
+            currentBalance += coinsAmount;
         } else if (type === 'chargeback') {
-            currentBalance += points; // Negative value automated logic thapine le afai deduction huncha
+            currentBalance += coinsAmount; // Negative value automated logic thapida direct subtraction huncha
         }
 
-        // Realtime Database update transaction execution
+        // Realtime Database direct save criteria execution
         await userRef.update({ balance: currentBalance });
         return res.status(200).send("OK");
 
